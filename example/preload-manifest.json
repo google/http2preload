@@ -1,0 +1,12 @@
+{
+  "/": [
+    {
+      "url": "/app.css",
+      "type": "style"
+    },
+    {
+      "url": "/app.js",
+      "type": "script"
+    }
+  ]
+}
