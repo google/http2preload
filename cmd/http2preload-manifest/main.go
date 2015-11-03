@@ -66,9 +66,9 @@ func main() {
 	// create manifest from sources
 	manifest := http2preload.Manifest{}
 	type result struct {
-		src string
-		a   []*http2preload.Asset
-		err error
+		src    string
+		assets map[string]http2preload.AssetOpt
+		err    error
 	}
 	n := len(src)
 	if n > 100 {
@@ -92,7 +92,7 @@ func main() {
 			log.Printf("%s: %v", r.src, r.err)
 			continue
 		}
-		manifest[normPath(r.src)] = r.a
+		manifest[normPath(r.src)] = r.assets
 	}
 
 	// output result
@@ -165,6 +165,8 @@ and generates a preload manifest file in JSON format, either writing it
 to stdout or a file specified with -o argument.
 
 If no src argument is provided, current directory will be used.
+
+Preload spec is available at https://w3c.github.io/preload/.
 
 Options:
 `

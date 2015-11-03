@@ -10,6 +10,7 @@
 // limitations under the License.
 
 // Package http2preload provides a way to manipulate HTTP/2 preload header.
+// See https://w3c.github.io/preload/ for Preload feature details.
 package http2preload
 
 import (
@@ -33,21 +34,27 @@ const (
 	Video  = "video"
 )
 
-// Asset is an element of Manifest values.
-type Asset struct {
-	URL  string `json:"url"`
-	Type string `json:"type"`
-}
+// Manifest is the preload manifest map where each value,
+// being a collection of resources to be preloaded,
+// keyed by a serving URL path which requires those resources.
+type Manifest map[string]map[string]AssetOpt
 
-// Manifest is the push manifest: a collection of assets
-// with each subset (map values) mapped to a URL path (map keys).
-type Manifest map[string][]*Asset
+// AssetOpt defines a single resource options.
+type AssetOpt struct {
+	// Type is the resource type
+	Type string `json:"type,omitempty"`
+
+	// Weight is not used in the HTTP/2 preload spec
+	// but some HTTP/2 servers, while implementing stream priorities,
+	// could benefit from this manifest format as well.
+	Weight uint8 `json:"weight,omitempty"`
+}
 
 // Handler creates a new handler which adds preload header(s)
 // if in-flight request URL matches one of the m entries.
 func (m Manifest) Handler(f http.HandlerFunc) http.Handler {
 	h := func(w http.ResponseWriter, r *http.Request) {
-		if a, ok := m[r.URL.Path]; ok {
+		if assets, ok := m[r.URL.Path]; ok {
 			s := r.Header.Get("x-forwarded-proto")
 			if s == "" && r.TLS != nil {
 				s = "https"
@@ -55,28 +62,27 @@ func (m Manifest) Handler(f http.HandlerFunc) http.Handler {
 			if s == "" {
 				s = "http"
 			}
-			AddHeader(w.Header(), s, r.Host, a...)
+			AddHeader(w.Header(), s, r.Host, assets)
 		}
 		f(w, r)
 	}
 	return http.HandlerFunc(h)
 }
 
-// AddHeader adds "Link: <url>; preload[; as=xxx]" header to h for each Asset a.
-// scheme://base will be prepended to all a.URL which are not prefixed
+// AddHeader adds a "link" header to hdr for each assets entry,
+// as specified in https://w3c.github.io/preload/.
+// "scheme://base" will be prepended to a key of assets which are not prefixed
 // with "http:" or "https:".
-func AddHeader(hdr http.Header, scheme, base string, a ...*Asset) {
-	for _, x := range a {
-		xu := x.URL
-		if !strings.HasPrefix(xu, "https:") && !strings.HasPrefix(xu, "http:") {
-			xu = scheme + "://" + path.Join(base, xu)
+func AddHeader(hdr http.Header, scheme, base string, assets map[string]AssetOpt) {
+	for url, opt := range assets {
+		if !strings.HasPrefix(url, "https:") && !strings.HasPrefix(url, "http:") {
+			url = scheme + "://" + path.Join(base, url)
 		}
-		v := fmt.Sprintf("<%s>; rel=preload", xu)
-		if x.Type != "" {
-			v += "; as=" + x.Type
+		v := fmt.Sprintf("<%s>; rel=preload", url)
+		if opt.Type != "" {
+			v += "; as=" + opt.Type
 		}
 		hdr.Add("link", v)
-		hdr.Add("x-associated-content", fmt.Sprintf("%q", xu))
 	}
 }
 

@@ -30,7 +30,7 @@ const (
 // SearchHTML finds links to assets referenced in HTML read from r.
 // Currently, only <img>, <link> and <script> tags are supported.
 // abs argument will discard assets with absolute URLs.
-func SearchHTML(r io.Reader, abs bool) ([]*http2preload.Asset, error) {
+func SearchHTML(r io.Reader, abs bool) (map[string]http2preload.AssetOpt, error) {
 	doc, err := html.Parse(r)
 	if err != nil {
 		return nil, err
@@ -38,32 +38,39 @@ func SearchHTML(r io.Reader, abs bool) ([]*http2preload.Asset, error) {
 	return searchNodes(doc, abs), nil
 }
 
-func searchNodes(root *html.Node, abs bool) []*http2preload.Asset {
-	var assets []*http2preload.Asset
+func searchNodes(root *html.Node, abs bool) map[string]http2preload.AssetOpt {
+	assets := make(map[string]http2preload.AssetOpt)
 	for n := root; n != nil; n = n.NextSibling {
-		var a *http2preload.Asset
+		var (
+			url string
+			opt http2preload.AssetOpt
+		)
 		switch n.DataAtom {
 		case atom.Link:
 			rel := getAttr("rel", n.Attr)
 			if rel != relStylesheet && rel != relImport {
 				break
 			}
-			a = &http2preload.Asset{URL: getAttr("href", n.Attr)}
+			url = getAttr("href", n.Attr)
 			if rel == relStylesheet {
-				a.Type = http2preload.Style
+				opt.Type = http2preload.Style
 			}
 		case atom.Script:
-			a = &http2preload.Asset{URL: getAttr("src", n.Attr), Type: http2preload.Script}
+			url = getAttr("src", n.Attr)
+			opt.Type = http2preload.Script
 		case atom.Img:
-			a = &http2preload.Asset{URL: getAttr("src", n.Attr), Type: http2preload.Image}
+			url = getAttr("src", n.Attr)
+			opt.Type = http2preload.Image
 		}
-		if a != nil {
-			if a.URL != "" && (abs || !isAbs(a.URL)) {
-				assets = append(assets, a)
+		if url != "" {
+			if abs || !isAbs(url) {
+				assets[url] = opt
 			}
 			continue
 		}
-		assets = append(assets, searchNodes(n.FirstChild, abs)...)
+		for k, v := range searchNodes(n.FirstChild, abs) {
+			assets[k] = v
+		}
 	}
 	return assets
 }

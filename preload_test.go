@@ -24,11 +24,11 @@ import (
 func TestManifest(t *testing.T) {
 	m := Manifest{
 		"/abs": {
-			&Asset{URL: "http://example.org/app.css", Type: Style},
-			&Asset{URL: "http://example.org/app.js"},
+			"http://example.org/app.css": {Type: Style},
+			"http://example.org/app.js":  {},
 		},
 		"/rel": {
-			&Asset{URL: "/app.js"},
+			"/app.js": {},
 		},
 		"/empty": {},
 	}
@@ -69,8 +69,8 @@ func TestManifest(t *testing.T) {
 }
 
 func TestReadManifest(t *testing.T) {
-	const manStr = `{"/": [{"url": "/app.js", "type": "script"}]}`
-	var manWant = Manifest{"/": {&Asset{URL: "/app.js", Type: Script}}}
+	const manStr = `{"/": {"/app.js": {"type": "script"}}}`
+	var manWant = Manifest{"/": {"/app.js": {Type: Script}}}
 
 	// tmp file to hold manStr manifest
 	f, err := ioutil.TempFile("", "http2preload")
