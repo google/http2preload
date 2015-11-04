@@ -1,0 +1,114 @@
+<!--
+Copyright 2015 Google Inc. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <title>Preload manifest generator</title>
+  <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.indigo-pink.min.css">
+  <script src="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.min.js"></script>
+  <style>
+    body {
+      padding: 0 10px;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    pre {
+      background-color: #efefef;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: inline-block;
+    }
+    .api dt {
+      font-family: monospace;
+    }
+    .api dd {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Preload manifest generator</h1>
+
+  <p>Type a URL and click on generate:<p>
+  <form id="gen">
+    <div class="mdl-textfield mdl-js-textfield">
+      <input type="url" id="url" class="mdl-textfield__input" required>
+      <label for="url" class="mdl-textfield__label">URL</label>
+    </div>
+    <div>
+      <button type="submit" id="btn" class="mdl-button mdl-js-button mdl-button--raised">
+        generate
+      </button>
+    </div>
+  </form>
+  <p>
+    <div id="spinner" class="mdl-spinner mdl-js-spinner is-active"></div>
+    <!--<div id="spinner" class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>-->
+    <pre id="result"><code id="code"></code></pre>
+  </p>
+
+  <h2>API</h2>
+
+  <dl class="api">
+    <dt>GET /manifest?url=&lt;url&gt;</dt>
+    <dd>Generate manifest from the given URL.</dd>
+
+    <dt>POST /manifest</dt>
+    <dd>Generate manifest from the markup in request body.</dd>
+  </dl>
+
+
+  <script>
+    var input = document.querySelector('#url');
+    var code = document.querySelector('#code');
+    var result = document.querySelector('#result');
+    var spinner = document.querySelector('#spinner');
+    var btn = document.querySelector('#btn');
+
+    function generate(e) {
+      e.preventDefault();
+      inProgress();
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "/manifest?url=" + encodeURIComponent(input.value));
+      xhr.addEventListener("load", displayResult);
+      xhr.send();
+    }
+
+    function displayResult() {
+      code.textContent = textContent = this.responseText;
+      ready();
+    }
+
+    function inProgress() {
+      spinner.style.display = null;
+      result.style.display = 'none';
+      btn.setAttribute('disabled', null);
+    }
+
+    function ready() {
+      btn.removeAttribute('disabled');
+      result.style.display = null;
+      spinner.style.display = 'none';
+    }
+
+    ready();
+    result.style.display = 'none';
+    document.querySelector('#gen').addEventListener('submit', generate);
+  </script>
+</body>
+</html>
